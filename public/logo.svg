@@ -1,0 +1,11 @@
+<svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(40, 60)">
+    <path d="M60 10 Q35 12 10 20 L10 70 Q35 63 60 65 Z" fill="#dce8f5" stroke="#1a5fa8" stroke-width="1.5"/>
+    <path d="M60 10 Q85 12 110 20 L110 70 Q85 63 60 65 Z" fill="#f4f7fb" stroke="#1a5fa8" stroke-width="1.5"/>
+    <line x1="60" y1="10" x2="60" y2="65" stroke="#1a5fa8" stroke-width="2"/>
+    <polyline points="68,40 76,40 80,28 84,52 88,35 92,40 102,40" fill="none" stroke="#5b9bd5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="175" y="95" font-family="DM Sans, sans-serif" font-size="28" font-weight="500" fill="#0d2d52" letter-spacing="-0.5">Kortena</text>
+  <text x="175" y="118" font-family="DM Sans, sans-serif" font-size="13" font-weight="300" fill="#5b9bd5" letter-spacing="3">AI ANALYZER</text>
+  <line x1="175" y1="125" x2="310" y2="125" stroke="#dce8f5" stroke-width="1"/>
+</svg>

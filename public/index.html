@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kortena AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <img src="logo.svg" alt="Kortena AI" style="height: 120px; margin-bottom: 48px; display: block;">
+    <h1>Text Analyzer</h1>
+    <p class="sub">Paste any text to analyze its sentiment and clarity.</p>
+
+    <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+    <button id="btn" onclick="analyze()">Analyze</button>
+
+    <div id="results">
+      <div class="divider"></div>
+      <div class="scores">
+        <div class="score-card">
+          <div class="value" id="sentiment_score">—</div>
+          <div class="name">Sentiment</div>
+        </div>
+        <div class="score-card">
+          <div class="value" id="clarity_score">—</div>
+          <div class="name">Clarity</div>
+        </div>
+        <div class="score-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <span class="sentiment-badge" id="sentiment_badge">—</span>
+          <div class="name" style="margin-top:8px">Tone</div>
+        </div>
+      </div>
+      <div class="section">
+        <p class="section-label">Summary</p>
+        <p class="summary-text" id="summary"></p>
+      </div>
+      <div class="section">
+        <p class="section-label">Suggestions</p>
+        <ul id="suggestions"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function analyze() {
+      const text = document.getElementById('inputText').value;
+      if (!text) return alert('Please enter some text');
+
+      const btn = document.getElementById('btn');
+      btn.textContent = 'Analyzing...';
+      btn.classList.add('loading');
+
+      const res = await fetch('/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      const data = await res.json();
+      console.log(data);
+
+      const top = data.sort((a, b) => b.score - a.score)[0];
+      const sentiment = top.label.toLowerCase();
+      const score = Math.round(top.score * 10);
+
+      document.getElementById('sentiment_score').textContent = score + '/10';
+      document.getElementById('clarity_score').textContent = '—';
+
+      const badge = document.getElementById('sentiment_badge');
+      badge.textContent = sentiment;
+      badge.className = 'sentiment-badge ' + (sentiment === 'positive' ? 'positive' : 'negative');
+
+      document.getElementById('summary').textContent = `The text has a ${sentiment} sentiment with a confidence of ${Math.round(top.score * 100)}%.`;
+
+      const ul = document.getElementById('suggestions');
+      ul.innerHTML = '';
+      ul.innerHTML = '<li>Consider reviewing your word choice for clarity</li><li>Try to be more concise</li>';
+
+      document.getElementById('results').style.display = 'block';
+      btn.textContent = 'Analyze';
+      btn.classList.remove('loading');
+    }
+  </script>
+</body>
+</html>
