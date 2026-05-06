@@ -9,7 +9,7 @@
 </head>
 <body>
   <div class="container">
-    <img src="logo.svg" alt="Kortena AI" style="height: 120px; margin-bottom: 48px; display: block;">
+    <img src="logo2.svg" alt="Kortena AI" style="height: 120px; margin-bottom: 48px; display: block;">
     <h1>Text Analyzer</h1>
     <p class="sub">Paste any text to analyze its sentiment and clarity.</p>
 
@@ -61,12 +61,17 @@
       const data = await res.json();
       console.log(data);
 
-      const top = data.sort((a, b) => b.score - a.score)[0];
+      const top = data.sentiment.sort((a, b) => b.score - a.score)[0];
       const sentiment = top.label.toLowerCase();
-      const score = Math.round(top.score * 10);
 
-      document.getElementById('sentiment_score').textContent = score + '/10';
-      document.getElementById('clarity_score').textContent = '—';
+      const sentimentScore = Math.round(top.score * 10);
+      const words = text.trim().split(/\s+/);
+      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+      const avgWords = words.length / Math.max(sentences.length, 1);
+      const clarityScore = Math.min(10, Math.max(1, Math.round(10 - (avgWords > 20 ? (avgWords - 20) * 0.3 : 0) - (words.length < 10 ? 3 : 0))));
+
+      document.getElementById('sentiment_score').textContent = sentimentScore + '/10';
+      document.getElementById('clarity_score').textContent = clarityScore + '/10';
 
       const badge = document.getElementById('sentiment_badge');
       badge.textContent = sentiment;
@@ -76,7 +81,11 @@
 
       const ul = document.getElementById('suggestions');
       ul.innerHTML = '';
-      ul.innerHTML = '<li>Consider reviewing your word choice for clarity</li><li>Try to be more concise</li>';
+      data.suggestions.forEach(s => {
+        const li = document.createElement('li');
+        li.textContent = s;
+        ul.appendChild(li);
+      });
 
       document.getElementById('results').style.display = 'block';
       btn.textContent = 'Analyze';
