@@ -1,96 +1,166 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kortena AI</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div class="container">
-    <img src="logo2.svg" alt="Kortena AI" style="height: 120px; margin-bottom: 48px; display: block;">
-    <h1>Text Analyzer</h1>
-    <p class="sub">Paste any text to analyze its sentiment and clarity.</p>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <textarea id="inputText" placeholder="Paste your text here..."></textarea>
-    <button id="btn" onclick="analyze()">Analyze</button>
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #0a0a0a;
+  color: #ffffff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 20px;
+}
 
-    <div id="results">
-      <div class="divider"></div>
-      <div class="scores">
-        <div class="score-card">
-          <div class="value" id="sentiment_score">—</div>
-          <div class="name">Sentiment</div>
-        </div>
-        <div class="score-card">
-          <div class="value" id="clarity_score">—</div>
-          <div class="name">Clarity</div>
-        </div>
-        <div class="score-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <span class="sentiment-badge" id="sentiment_badge">—</span>
-          <div class="name" style="margin-top:8px">Tone</div>
-        </div>
-      </div>
-      <div class="section">
-        <p class="section-label">Summary</p>
-        <p class="summary-text" id="summary"></p>
-      </div>
-      <div class="section">
-        <p class="section-label">Suggestions</p>
-        <ul id="suggestions"></ul>
-      </div>
-    </div>
-  </div>
+.container { width: 100%; max-width: 620px; }
 
-  <script>
-    async function analyze() {
-      const text = document.getElementById('inputText').value;
-      if (!text) return alert('Please enter some text');
+h1 {
+  font-size: 32px;
+  font-weight: 300;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+  color: #ffffff;
+}
 
-      const btn = document.getElementById('btn');
-      btn.textContent = 'Analyzing...';
-      btn.classList.add('loading');
+.sub {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 32px;
+  font-weight: 300;
+}
 
-      const res = await fetch('/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
+textarea {
+  width: 100%;
+  height: 160px;
+  padding: 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 300;
+  color: #ffffff;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  line-height: 1.6;
+}
 
-      const data = await res.json();
-      console.log(data);
+textarea:focus { border-color: #4a90d9; }
+textarea::placeholder { color: #444; }
 
-      const top = data.sentiment.sort((a, b) => b.score - a.score)[0];
-      const sentiment = top.label.toLowerCase();
+button {
+  margin-top: 12px;
+  padding: 12px 28px;
+  background: #4a90d9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: background 0.2s, transform 0.1s;
+}
 
-      const sentimentScore = Math.round(top.score * 10);
-      const words = text.trim().split(/\s+/);
-      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-      const avgWords = words.length / Math.max(sentences.length, 1);
-      const clarityScore = Math.min(10, Math.max(1, Math.round(10 - (avgWords > 20 ? (avgWords - 20) * 0.3 : 0) - (words.length < 10 ? 3 : 0))));
+button:hover { background: #357abd; }
+button:active { transform: scale(0.98); }
+button.loading { background: #2a5a8a; pointer-events: none; }
 
-      document.getElementById('sentiment_score').textContent = sentimentScore + '/10';
-      document.getElementById('clarity_score').textContent = clarityScore + '/10';
+#results {
+  margin-top: 40px;
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
 
-      const badge = document.getElementById('sentiment_badge');
-      badge.textContent = sentiment;
-      badge.className = 'sentiment-badge ' + (sentiment === 'positive' ? 'positive' : 'negative');
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-      document.getElementById('summary').textContent = `The text has a ${sentiment} sentiment with a confidence of ${Math.round(top.score * 100)}%.`;
+.divider {
+  height: 1px;
+  background: #1e1e1e;
+  margin-bottom: 32px;
+}
 
-      const ul = document.getElementById('suggestions');
-      ul.innerHTML = '';
-      data.suggestions.forEach(s => {
-        const li = document.createElement('li');
-        li.textContent = s;
-        ul.appendChild(li);
-      });
+.scores {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 32px;
+}
 
-      document.getElementById('results').style.display = 'block';
-      btn.textContent = 'Analyze';
-      btn.classList.remove('loading');
-    }
-  </script>
-</body>
-</html>
+.score-card {
+  background: #111111;
+  border: 1px solid #222222;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.score-card .value {
+  font-size: 26px;
+  font-weight: 500;
+  color: #4a90d9;
+  font-family: 'DM Mono', monospace;
+}
+
+.score-card .name {
+  font-size: 11px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+
+.sentiment-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+  letter-spacing: 0.04em;
+}
+
+.positive { background: #0f2a1a; color: #4caf82; }
+.negative { background: #2a0f0f; color: #e05555; }
+.neutral  { background: #1a1a2e; color: #4a90d9; }
+
+.section { margin-bottom: 24px; }
+
+.section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
+}
+
+.summary-text {
+  font-size: 15px;
+  color: #aaa;
+  font-weight: 300;
+  line-height: 1.7;
+}
+
+ul { list-style: none; padding: 0; }
+
+ul li {
+  font-size: 14px;
+  color: #999;
+  font-weight: 300;
+  padding: 10px 0;
+  border-bottom: 1px solid #1a1a1a;
+  line-height: 1.6;
+}
+
+ul li:last-child { border-bottom: none; }
+
+ul li::before {
+  content: '→';
+  margin-right: 10px;
+  color: #4a90d9;
+}
