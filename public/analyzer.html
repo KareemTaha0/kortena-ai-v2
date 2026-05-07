@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kortena AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <img src="logo2.svg" alt="Kortena AI" style="height: 80px; margin-bottom: 40px; display: block;">
+    <h1>Text Analyzer</h1>
+    <p class="sub">Paste any text to analyze its sentiment and clarity.</p>
+
+    <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+    <button id="btn" onclick="analyze()">Analyze</button>
+
+    <div id="results">
+      <div class="divider"></div>
+      <div class="scores">
+        <div class="score-card">
+          <div class="value" id="sentiment_score">—</div>
+          <div class="name">Sentiment</div>
+        </div>
+        <div class="score-card">
+          <div class="value" id="clarity_score">—</div>
+          <div class="name">Clarity</div>
+        </div>
+        <div class="score-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <span class="sentiment-badge" id="sentiment_badge">—</span>
+          <div class="name" style="margin-top:8px">Tone</div>
+        </div>
+      </div>
+      <div class="section">
+        <p class="section-label">Summary</p>
+        <p class="summary-text" id="summary"></p>
+      </div>
+      <div class="section">
+        <p class="section-label">Suggestions</p>
+        <ul id="suggestions"></ul>
+      </div>
+      <button id="copyBtn" onclick="copyResults()">Copy Results</button>
+    </div>
+  </div>
+
+  <script>
+    async function analyze() {
+      const text = document.getElementById('inputText').value;
+      if (!text) return alert('Please enter some text');
+
+      const btn = document.getElementById('btn');
+      btn.textContent = 'Analyzing...';
+      btn.classList.add('loading');
+
+      const res = await fetch('/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      const data = await res.json();
+      console.log(data);
+
+      const top = data.sentiment.sort((a, b) => b.score - a.score)[0];
+      const sentiment = top.label.toLowerCase();
+
+      const sentimentScore = Math.round(top.score * 10);
+      const words = text.trim().split(/\s+/);
+      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+      const avgWords = words.length / Math.max(sentences.length, 1);
+      const clarityScore = Math.min(10, Math.max(1, Math.round(10 - (avgWords > 20 ? (avgWords - 20) * 0.3 : 0) - (words.length < 10 ? 3 : 0))));
+
+      document.getElementById('sentiment_score').textContent = sentimentScore + '/10';
+      document.getElementById('clarity_score').textContent = clarityScore + '/10';
+
+      const badge = document.getElementById('sentiment_badge');
+      badge.textContent = sentiment;
+      badge.className = 'sentiment-badge ' + (sentiment === 'positive' ? 'positive' : 'negative');
+
+      document.getElementById('summary').textContent = `The text has a ${sentiment} sentiment with a confidence of ${Math.round(top.score * 100)}%.`;
+
+      const ul = document.getElementById('suggestions');
+      ul.innerHTML = '';
+      data.suggestions.forEach(s => {
+        const li = document.createElement('li');
+        li.textContent = s;
+        ul.appendChild(li);
+      });
+
+      document.getElementById('results').style.display = 'block';
+      btn.textContent = 'Analyze';
+      btn.classList.remove('loading');
+    }
+
+    function copyResults() {
+      const sentiment = document.getElementById('sentiment_badge').textContent;
+      const sentimentScore = document.getElementById('sentiment_score').textContent;
+      const clarityScore = document.getElementById('clarity_score').textContent;
+      const summary = document.getElementById('summary').textContent;
+
+      const suggestions = [];
+      document.querySelectorAll('#suggestions li').forEach(li => {
+        suggestions.push(li.textContent);
+      });
+
+      const result = `
+Sentiment: ${sentiment} (${sentimentScore})
+Clarity: ${clarityScore}
+Summary: ${summary}
+Suggestions:
+${suggestions.map(s => '- ' + s).join('\n')}
+      `.trim();
+
+      navigator.clipboard.writeText(result);
+      document.getElementById('copyBtn').textContent = 'Copied!';
+      setTimeout(() => {
+        document.getElementById('copyBtn').textContent = 'Copy Results';
+      }, 2000);
+    }
+  </script>
+</body>
+</html>
