@@ -164,3 +164,10 @@ ul li::before {
   margin-right: 10px;
   color: #4a90d9;
 }
+#copyBtn {
+  margin-top: 20px;
+  background: transparent;
+  border: 1px solid #4a90d9;
+  color: #4a90d9;
+}
+#copyBtn:hover { background: #4a90d9; color: #fff; }
