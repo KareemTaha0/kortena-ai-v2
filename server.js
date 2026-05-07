@@ -4,8 +4,17 @@ const { HfInference } = require('@huggingface/inference');
 const app = express();
 
 app.use(express.json());
+app.use(express.static('public', { index: false }));
 
 const hf = new HfInference(process.env.HF_API_KEY);
+
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
+
+app.get('/analyze', (req, res) => {
+  res.sendFile(__dirname + '/public/analyzer.html');
+});
 
 app.post('/analyze', async (req, res) => {
   const { text } = req.body;
@@ -28,21 +37,6 @@ app.post('/analyze', async (req, res) => {
     const hasExclamation = (text.match(/!/g) || []).length > 2;
     const hasQuestions = (text.match(/\?/g) || []).length > 0;
 
-    // Spelling check via free API
-    try {
-      const spellRes = await fetch(`https://api.textgears.com/spelling?text=${encodeURIComponent(text)}&language=en-US&key=DEMO_KEY`);
-      const spellData = await spellRes.json();
-      if (spellData.response && spellData.response.errors && spellData.response.errors.length > 0) {
-        const errors = spellData.response.errors.slice(0, 2).map(e => {
-          const fix = e.better && e.better[0] ? `"${e.bad}" → "${e.better[0]}"` : `"${e.bad}"`;
-          return fix;
-        }).join(', ');
-        suggestions.push(`Spelling errors found: ${errors}`);
-      }
-    } catch (spellErr) {
-      console.log('Spell check skipped');
-    }
-
     if (words.length < 15) suggestions.push("Your text is too short — add more context and detail to make your point stronger.");
     if (avgWords > 25) suggestions.push(`Your sentences average ${Math.round(avgWords)} words — try splitting them into shorter ones.`);
     if (hasPassiveVoice) suggestions.push("You're using passive voice — switch to active voice to sound more confident.");
@@ -61,7 +55,5 @@ app.post('/analyze', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-app.use(express.static('public'));
 
 app.listen(3000, () => console.log('Running on http://localhost:3000'));
