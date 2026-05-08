@@ -1,7 +1,20 @@
 require('dotenv').config();
 const express = require('express');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { HfInference } = require('@huggingface/inference');
 const app = express();
+
+// Security headers
+app.use(helmet());
+
+// Rate limiting — max 20 requests per 15 minutes per IP
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many requests — please try again later.' }
+});
+app.use('/analyze', limiter);
 
 app.use(express.json());
 app.use(express.static('public', { index: false }));
@@ -18,6 +31,18 @@ app.get('/analyze', (req, res) => {
 
 app.post('/analyze', async (req, res) => {
   const { text } = req.body;
+
+  // Input validation
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ error: 'Invalid input.' });
+  }
+  if (text.trim().length === 0) {
+    return res.status(400).json({ error: 'Text cannot be empty.' });
+  }
+  if (text.length > 2000) {
+    return res.status(400).json({ error: 'Text too long — max 2000 characters.' });
+  }
+
   try {
     const sentiment = await hf.textClassification({
       model: 'distilbert/distilbert-base-uncased-finetuned-sst-2-english',
