@@ -6,82 +6,20 @@
   <title>Kortena AI — Analyzer</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <style>
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 40px;
-    }
-    .topbar a {
-      font-size: 13px;
-      color: #555;
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-    .topbar a:hover { color: #4a90d9; }
-    .word-count {
-      font-size: 12px;
-      color: #444;
-      text-align: right;
-      margin-top: 6px;
-      font-family: 'DM Mono', monospace;
-    }
-    .history-section {
-      margin-top: 60px;
-      border-top: 1px solid #1a1a1a;
-      padding-top: 32px;
-    }
-    .history-section h3 {
-      font-size: 11px;
-      font-weight: 500;
-      color: #444;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 16px;
-    }
-    .history-item {
-      background: #111;
-      border: 1px solid #1e1e1e;
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .history-item:hover { border-color: #4a90d9; }
-    .history-item .h-text {
-      font-size: 13px;
-      color: #666;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 6px;
-    }
-    .history-item .h-meta {
-      display: flex;
-      gap: 12px;
-    }
-    .history-item .h-badge {
-      font-size: 11px;
-      font-family: 'DM Mono', monospace;
-      color: #4a90d9;
-    }
-  </style>
 </head>
 <body>
   <div class="container">
     <div class="topbar">
-      <img src="logo2.svg" alt="Kortena AI" style="height: 60px;">
+      <img src="kortena-logo.png" alt="Kortena AI" style="height: 60px;">
       <a href="/">← Back to home</a>
     </div>
 
     <h1>Text Analyzer</h1>
     <p class="sub">Paste any text to analyze its sentiment and clarity.</p>
 
-    <textarea id="inputText" placeholder="Paste your text here..." oninput="updateCount()"></textarea>
+    <textarea id="inputText" placeholder="Paste your text here..."></textarea>
     <div class="word-count" id="wordCount">0 words</div>
-    <button id="btn" onclick="analyze()">Analyze</button>
+    <button id="btn">Analyze</button>
 
     <div id="results">
       <div class="divider"></div>
@@ -107,7 +45,7 @@
         <p class="section-label">Suggestions</p>
         <ul id="suggestions"></ul>
       </div>
-      <button id="copyBtn" onclick="copyResults()">Copy Results</button>
+      <button id="copyBtn">Copy Results</button>
     </div>
 
     <div class="history-section" id="historySection" style="display:none;">
@@ -116,117 +54,6 @@
     </div>
   </div>
 
-  <script>
-    const history = [];
-
-    function updateCount() {
-      const text = document.getElementById('inputText').value.trim();
-      const count = text === '' ? 0 : text.split(/\s+/).length;
-      document.getElementById('wordCount').textContent = count + ' word' + (count !== 1 ? 's' : '');
-    }
-
-    async function analyze() {
-      const text = document.getElementById('inputText').value;
-      if (!text) return alert('Please enter some text');
-
-      const btn = document.getElementById('btn');
-      btn.textContent = 'Analyzing...';
-      btn.classList.add('loading');
-
-      const res = await fetch('/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-
-      const data = await res.json();
-      console.log(data);
-
-      const top = data.sentiment.sort((a, b) => b.score - a.score)[0];
-      const sentiment = top.label.toLowerCase();
-
-      const sentimentScore = Math.round(top.score * 10);
-      const words = text.trim().split(/\s+/);
-      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-      const avgWords = words.length / Math.max(sentences.length, 1);
-      const clarityScore = Math.min(10, Math.max(1, Math.round(10 - (avgWords > 20 ? (avgWords - 20) * 0.3 : 0) - (words.length < 10 ? 3 : 0))));
-
-      document.getElementById('sentiment_score').textContent = sentimentScore + '/10';
-      document.getElementById('clarity_score').textContent = clarityScore + '/10';
-
-      const badge = document.getElementById('sentiment_badge');
-      badge.textContent = sentiment;
-      badge.className = 'sentiment-badge ' + (sentiment === 'positive' ? 'positive' : 'negative');
-
-      document.getElementById('summary').textContent = `The text has a ${sentiment} sentiment with a confidence of ${Math.round(top.score * 100)}%.`;
-
-      const ul = document.getElementById('suggestions');
-      ul.innerHTML = '';
-      data.suggestions.forEach(s => {
-        const li = document.createElement('li');
-        li.textContent = s;
-        ul.appendChild(li);
-      });
-
-      document.getElementById('results').style.display = 'block';
-      btn.textContent = 'Analyze';
-      btn.classList.remove('loading');
-
-      // Save to history
-      history.unshift({ text, sentiment, sentimentScore, clarityScore });
-      if (history.length > 3) history.pop();
-      renderHistory();
-    }
-
-    function renderHistory() {
-      if (history.length === 0) return;
-      document.getElementById('historySection').style.display = 'block';
-      const list = document.getElementById('historyList');
-      list.innerHTML = '';
-      history.forEach((item, i) => {
-        const div = document.createElement('div');
-        div.className = 'history-item';
-        div.innerHTML = `
-          <div class="h-text">${item.text.substring(0, 80)}${item.text.length > 80 ? '...' : ''}</div>
-          <div class="h-meta">
-            <span class="h-badge">${item.sentiment}</span>
-            <span class="h-badge">sentiment ${item.sentimentScore}/10</span>
-            <span class="h-badge">clarity ${item.clarityScore}/10</span>
-          </div>
-        `;
-        div.onclick = () => {
-          document.getElementById('inputText').value = item.text;
-          updateCount();
-        };
-        list.appendChild(div);
-      });
-    }
-
-    function copyResults() {
-      const sentiment = document.getElementById('sentiment_badge').textContent;
-      const sentimentScore = document.getElementById('sentiment_score').textContent;
-      const clarityScore = document.getElementById('clarity_score').textContent;
-      const summary = document.getElementById('summary').textContent;
-
-      const suggestions = [];
-      document.querySelectorAll('#suggestions li').forEach(li => {
-        suggestions.push(li.textContent);
-      });
-
-      const result = `
-Sentiment: ${sentiment} (${sentimentScore})
-Clarity: ${clarityScore}
-Summary: ${summary}
-Suggestions:
-${suggestions.map(s => '- ' + s).join('\n')}
-      `.trim();
-
-      navigator.clipboard.writeText(result);
-      document.getElementById('copyBtn').textContent = 'Copied!';
-      setTimeout(() => {
-        document.getElementById('copyBtn').textContent = 'Copy Results';
-      }, 2000);
-    }
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
