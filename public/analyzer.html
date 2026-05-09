@@ -23,13 +23,22 @@
 
     <div id="results">
       <div class="divider"></div>
+
       <div class="scores">
         <div class="score-card">
           <div class="value" id="sentiment_score">—</div>
           <div class="name">Sentiment</div>
         </div>
         <div class="score-card">
-          <div class="value" id="clarity_score">—</div>
+          <div class="clarity-ring">
+            <svg viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#1a1a1a" stroke-width="6"/>
+              <circle id="clarityCircle" cx="40" cy="40" r="32" fill="none" stroke="#4a90d9" stroke-width="6"
+                stroke-dasharray="201" stroke-dashoffset="201" stroke-linecap="round"
+                transform="rotate(-90 40 40)"/>
+            </svg>
+            <div class="ring-value" id="clarity_score">—</div>
+          </div>
           <div class="name">Clarity</div>
         </div>
         <div class="score-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
@@ -37,14 +46,22 @@
           <div class="name" style="margin-top:8px">Tone</div>
         </div>
       </div>
+
+      <div class="section">
+        <p class="section-label">Suggestions</p>
+        <div id="tags" class="tags"></div>
+      </div>
+
+      <div class="section">
+        <p class="section-label">Improvements</p>
+        <ul id="suggestions"></ul>
+      </div>
+
       <div class="section">
         <p class="section-label">Summary</p>
         <p class="summary-text" id="summary"></p>
       </div>
-      <div class="section">
-        <p class="section-label">Suggestions</p>
-        <ul id="suggestions"></ul>
-      </div>
+
       <button id="copyBtn">Copy Results</button>
     </div>
 

@@ -12,6 +12,36 @@ function updateCount() {
   document.getElementById('wordCount').textContent = count + ' word' + (count !== 1 ? 's' : '');
 }
 
+function animateCircle(score) {
+  const circle = document.getElementById('clarityCircle');
+  const circumference = 201;
+  const offset = circumference - (score / 100) * circumference;
+  circle.style.transition = 'stroke-dashoffset 1s ease';
+  circle.style.strokeDashoffset = offset;
+
+  // Color based on score
+  if (score >= 70) circle.style.stroke = '#4caf82';
+  else if (score >= 40) circle.style.stroke = '#f0a500';
+  else circle.style.stroke = '#e05555';
+}
+
+function animateValue(id, value, suffix = '') {
+  const el = document.getElementById(id);
+  let start = 0;
+  const end = parseInt(value);
+  const duration = 800;
+  const step = Math.ceil(end / (duration / 16));
+  const timer = setInterval(() => {
+    start += step;
+    if (start >= end) {
+      el.textContent = end + suffix;
+      clearInterval(timer);
+    } else {
+      el.textContent = start + suffix;
+    }
+  }, 16);
+}
+
 async function analyze() {
   const text = document.getElementById('inputText').value;
   if (!text) return alert('Please enter some text');
@@ -20,47 +50,67 @@ async function analyze() {
   btn.textContent = 'Analyzing...';
   btn.classList.add('loading');
 
-  const res = await fetch('/analyze', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
-  });
+  try {
+    const res = await fetch('/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
 
-  const data = await res.json();
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
 
-  const top = data.sentiment.sort((a, b) => b.score - a.score)[0];
-  const sentiment = top.label.toLowerCase();
+    const top = data.sentiment.sort((a, b) => b.score - a.score)[0];
+    const sentiment = top.label.toLowerCase();
+    const sentimentScore = Math.round(top.score * 10);
 
-  const sentimentScore = Math.round(top.score * 10);
-  const words = text.trim().split(/\s+/);
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-  const avgWords = words.length / Math.max(sentences.length, 1);
-  const clarityScore = Math.min(10, Math.max(1, Math.round(10 - (avgWords > 20 ? (avgWords - 20) * 0.3 : 0) - (words.length < 10 ? 3 : 0))));
+    // Animate scores
+    animateValue('sentiment_score', sentimentScore, '/10');
+    document.getElementById('clarity_score').textContent = data.clarityScore;
+    animateCircle(data.clarityScore);
 
-  document.getElementById('sentiment_score').textContent = sentimentScore + '/10';
-  document.getElementById('clarity_score').textContent = clarityScore + '/10';
+    const badge = document.getElementById('sentiment_badge');
+    badge.textContent = sentiment;
+    badge.className = 'sentiment-badge ' + (sentiment === 'positive' ? 'positive' : 'negative');
 
-  const badge = document.getElementById('sentiment_badge');
-  badge.textContent = sentiment;
-  badge.className = 'sentiment-badge ' + (sentiment === 'positive' ? 'positive' : 'negative');
+    // Tags
+    const tagsEl = document.getElementById('tags');
+    tagsEl.innerHTML = '';
+    (data.tags || []).forEach(tag => {
+      const span = document.createElement('span');
+      span.className = 'tag';
+      span.textContent = tag;
+      tagsEl.appendChild(span);
+    });
 
-  document.getElementById('summary').textContent = `The text has a ${sentiment} sentiment with a confidence of ${Math.round(top.score * 100)}%.`;
+    // Suggestions
+    const ul = document.getElementById('suggestions');
+    ul.innerHTML = '';
+    data.suggestions.forEach((s, i) => {
+      const li = document.createElement('li');
+      li.textContent = s;
+      li.style.animationDelay = `${i * 0.1}s`;
+      li.classList.add('fade-in');
+      ul.appendChild(li);
+    });
 
-  const ul = document.getElementById('suggestions');
-  ul.innerHTML = '';
-  data.suggestions.forEach(s => {
-    const li = document.createElement('li');
-    li.textContent = s;
-    ul.appendChild(li);
-  });
+    document.getElementById('summary').textContent = `The text has a ${sentiment} sentiment with ${data.clarityScore}/100 clarity score.`;
 
-  document.getElementById('results').style.display = 'block';
-  btn.textContent = 'Analyze';
-  btn.classList.remove('loading');
+    const results = document.getElementById('results');
+    results.style.display = 'block';
+    results.classList.add('fade-in');
 
-  history.unshift({ text, sentiment, sentimentScore, clarityScore });
-  if (history.length > 3) history.pop();
-  renderHistory();
+    // History
+    history.unshift({ text, sentiment, sentimentScore, clarityScore: data.clarityScore });
+    if (history.length > 3) history.pop();
+    renderHistory();
+
+  } catch (err) {
+    alert('Something went wrong. Please try again.');
+  } finally {
+    btn.textContent = 'Analyze';
+    btn.classList.remove('loading');
+  }
 }
 
 function renderHistory() {
@@ -76,7 +126,7 @@ function renderHistory() {
       <div class="h-meta">
         <span class="h-badge">${item.sentiment}</span>
         <span class="h-badge">sentiment ${item.sentimentScore}/10</span>
-        <span class="h-badge">clarity ${item.clarityScore}/10</span>
+        <span class="h-badge">clarity ${item.clarityScore}/100</span>
       </div>
     `;
     div.addEventListener('click', () => {
@@ -94,13 +144,11 @@ function copyResults() {
   const summary = document.getElementById('summary').textContent;
 
   const suggestions = [];
-  document.querySelectorAll('#suggestions li').forEach(li => {
-    suggestions.push(li.textContent);
-  });
+  document.querySelectorAll('#suggestions li').forEach(li => suggestions.push(li.textContent));
 
   const result = `
 Sentiment: ${sentiment} (${sentimentScore})
-Clarity: ${clarityScore}
+Clarity: ${clarityScore}/100
 Summary: ${summary}
 Suggestions:
 ${suggestions.map(s => '- ' + s).join('\n')}
